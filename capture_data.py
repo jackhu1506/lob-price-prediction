@@ -5,29 +5,42 @@ import time
 import websockets
 
 URL = "wss://ws.kraken.com"
-CAPTURE_SECONDS = 60          # record for 60 seconds
+CAPTURE_SECONDS = 12 * 3600        # 12 hours; set as long as you want
 OUTPUT_FILE = "data/raw_book.jsonl"
 
-async def main():
-    os.makedirs("data", exist_ok=True)   # make the data folder if it doesn't exist
-    async with websockets.connect(URL) as ws:
-        subscribe = {
-            "event": "subscribe",
-            "pair": ["BTC/USD"],
-            "subscription": {"name": "book", "depth": 10}
-        }
-        await ws.send(json.dumps(subscribe))
+async def capture():
+    os.makedirs("data", exist_ok=True)
+    start = time.time()
+    count = 0
 
-        start = time.time()
-        count = 0
-        with open(OUTPUT_FILE, "w") as f:
-            while time.time() - start < CAPTURE_SECONDS:
-                message = await ws.recv()
-                f.write(message + "\n")   # one message per line
-                count += 1
-                if count % 50 == 0:
-                    print(f"captured {count} messages...")
+    # append mode so reconnects don't erase earlier data
+    with open(OUTPUT_FILE, "a") as f:
+        while time.time() - start < CAPTURE_SECONDS:
+            try:
+                async with websockets.connect(URL, ping_interval=20, ping_timeout=20) as ws:
+                    subscribe = {
+                        "event": "subscribe",
+                        "pair": ["BTC/USD"],
+                        "subscription": {"name": "book", "depth": 10},
+                    }
+                    await ws.send(json.dumps(subscribe))
 
-        print(f"Done. Captured {count} messages to {OUTPUT_FILE}")
+                    while time.time() - start < CAPTURE_SECONDS:
+                        message = await ws.recv()
+                        f.write(message + "\n")
+                        count += 1
+                        if count % 1000 == 0:
+                            f.flush()                    # force to disk
+                            os.fsync(f.fileno())         # really force to disk
+                            elapsed = (time.time() - start) / 3600
+                            print(f"captured {count} messages... ({elapsed:.2f}h elapsed)")
 
-asyncio.run(main())
+            except (websockets.ConnectionClosed, OSError, asyncio.TimeoutError) as e:
+                print(f"[{time.strftime('%H:%M:%S')}] disconnected: {e!r} — reconnecting in 5s")
+                f.flush()
+                os.fsync(f.fileno())
+                await asyncio.sleep(5)
+
+    print(f"Done. Captured {count} messages to {OUTPUT_FILE}")
+
+asyncio.run(capture())

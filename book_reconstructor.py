@@ -56,6 +56,7 @@ class OrderBook:
             print(f"  {price:.2f}  {self.bids[price]:.6f}")
     
     def verify_checksum(self, expected_crc, price_decimals=5, qty_decimals=8):
+        """Recompute Kraken's CRC32 over the top-10 book and compare to expected("c" field)."""
         top_asks = sorted(self.asks)[:10]
         top_bids = sorted(self.bids, reverse=True)[:10]
 
