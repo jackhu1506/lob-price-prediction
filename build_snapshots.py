@@ -74,3 +74,5 @@ if __name__ == "__main__":
     df = build_snapshots("data/raw_book.jsonl")
     print(df.shape)
     print(df.head())
+    df.to_parquet("data/snapshots.parquet")
+    print("wrote data/snapshots.parquet")
