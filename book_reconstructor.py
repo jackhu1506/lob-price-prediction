@@ -9,11 +9,18 @@ class OrderBook:
 
     def seed_from_snapshot(self, data):
         """Seed the book from the snapshot message (the one with 'as'/'bs' as keys).
+        A snapshot is the COMPLETE book state, so it replaces — never merges with —
+        whatever was there before (critical on reconnect reseeds mid-stream).
         [price, quantity, timestamp]"""
-        for price, qty, *_ in data["bs"]:
-            self.bids[float(price)] = float(qty)
-        for price, qty, *_ in data["as"]:
-            self.asks[float(price)] = float(qty)
+
+        if "bs" in data:
+            self.bids = {}
+            for price, qty, *_ in data["bs"]:
+                self.bids[float(price)] = float(qty)
+        if "as" in data:
+            self.asks = {}
+            for price, qty, *_ in data["as"]:
+                self.asks[float(price)] = float(qty)
 
     def apply_update(self, data):
         if "b" in data:
@@ -56,7 +63,7 @@ class OrderBook:
             print(f"  {price:.2f}  {self.bids[price]:.6f}")
     
     def verify_checksum(self, expected_crc, price_decimals=5, qty_decimals=8):
-        """Recompute Kraken's CRC32 over the top-10 book and compare to expected("c" field)."""
+        """Recompute Kraken's CRC32 over the top-10 book and compare to expected ('c' field)."""
         top_asks = sorted(self.asks)[:10]
         top_bids = sorted(self.bids, reverse=True)[:10]
 
@@ -72,16 +79,8 @@ class OrderBook:
             parts.append(fmt(price, price_decimals))
             parts.append(fmt(self.bids[price], qty_decimals))
 
-        checksum_str = "".join(parts)
-        computed = zlib.crc32(checksum_str.encode("ascii"))
-        
-        # temporary debug
-        print("CHECKSUM STRING:", checksum_str)
-        print("COMPUTED:", computed)
-        print("EXPECTED:", int(expected_crc))
-        
+        computed = zlib.crc32("".join(parts).encode("ascii"))
         return computed == int(expected_crc)
-
 
 if __name__ == "__main__":
     book = OrderBook()
