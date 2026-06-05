@@ -1,4 +1,6 @@
-"""turn LOB snapshots into useful model features."""
+"""
+turn LOB snapshots into useful model features.
+"""
 
 import numpy as np
 import pandas as pd
@@ -79,7 +81,7 @@ def build_features(df, depth_k=5, ofi_window=10, gap_s=GRID_S * 1.5):
         s = pd.Series(o)
         rolled = np.full(len(o), np.nan)
         for sid in np.unique(seg):
-            m = seg == sid
+            m = seg == sid # m is a boolean mask for the rows in segment sid: F F F T T T F F F F F...
             rolled[m] = s[m].rolling(ofi_window, min_periods=ofi_window).sum().to_numpy()
         out[f"ofi_1_sum_{ofi_window}"] = rolled
 
