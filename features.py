@@ -20,20 +20,20 @@ def ofi_level(bid_px, bid_sz, ask_px, ask_sz):
 
     for i in range(len(bp)):
         # bid side
-        if bp[i] > pbp[i]:            # bid price went UP
-            bid_flow[i] = bq[i]            # +new size
-        elif bp[i] == pbp[i]:         # bid price FLAT
-            bid_flow[i] = bq[i] - pbq[i]   # size change
-        else:                         # bid price went DOWN
-            bid_flow[i] = -pbq[i]          # -old size
+        if bp[i] > pbp[i]: # bid price went UP
+            bid_flow[i] = bq[i] # +new size
+        elif bp[i] == pbp[i]: # bid price FLAT
+            bid_flow[i] = bq[i] - pbq[i] # size change
+        else: # bid price went DOWN
+            bid_flow[i] = -pbq[i] # -old size
 
         # ask side
-        if ap[i] > pap[i]:            # ask price went UP
-            ask_flow[i] = -paq[i]          # -old size
-        elif ap[i] == pap[i]:         # ask price FLAT
-            ask_flow[i] = aq[i] - paq[i]   # size change
-        else:                         # ask price went DOWN
-            ask_flow[i] = aq[i]            # +new size
+        if ap[i] > pap[i]: # ask price went UP
+            ask_flow[i] = -paq[i] # -old size
+        elif ap[i] == pap[i]: # ask price FLAT
+            ask_flow[i] = aq[i] - paq[i] # size change
+        else: # ask price went DOWN
+            ask_flow[i] = aq[i] # +new size
     return bid_flow - ask_flow
 
 
