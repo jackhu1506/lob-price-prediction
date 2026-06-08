@@ -56,6 +56,15 @@ def main():
     fig.savefig("plots/decay_curve.png", dpi=150)
     print("\nsaved plots/decay_curve.png")
 
+    # positive control: re-run with purge=0 to reintroduce the leak on purpose.
+    # but the score effect is ~0, h rows out of ~491k is too small to move bal_acc.
+    print("\npositive control — honest (purge=h) vs leaked (purge=0):")
+    for h in HORIZONS:
+        honest = run_horizon(df, f"label_{h}", purge=h, n_folds=N_FOLDS)
+        leaked = run_horizon(df, f"label_{h}", purge=0, n_folds=N_FOLDS)
+        hb = honest[honest.model == "logreg"]["bal_acc"].mean()
+        lb = leaked[leaked.model == "logreg"]["bal_acc"].mean()
+        print(f"h={h:>2}  honest={hb:.3f}  leaked={lb:.3f}  gap={lb-hb:+.3f}")
 
 if __name__ == "__main__":
     main()
