@@ -14,7 +14,6 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-# hardcoded file paths
 SNAPSHOTS = "data/snapshots.parquet"
 LABELED   = "data/labeled.parquet"
 OUT_NPZ   = "data/windows_h10.npz"

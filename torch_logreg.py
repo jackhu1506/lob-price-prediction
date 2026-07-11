@@ -43,7 +43,7 @@ def train_torch_logreg(Xtr_s, ytr):
     weights = len(ytr_mapped) / (3 * counts)
     weight_tensor = torch.tensor(weights, dtype=torch.float32)
 
-    # numpy -> tensors (float32 features, long labels)
+    # numpy to tensors (float32 features, long labels)
     X = torch.from_numpy(Xtr_s).float()
     y = torch.from_numpy(ytr_mapped).long()
 
