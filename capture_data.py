@@ -30,8 +30,8 @@ async def capture():
                         f.write(message + "\n")
                         count += 1
                         if count % 1000 == 0:
-                            f.flush()                    # force to disk
-                            os.fsync(f.fileno())         # really force to disk
+                            f.flush()
+                            os.fsync(f.fileno())
                             elapsed = (time.time() - start) / 3600
                             print(f"captured {count} messages... ({elapsed:.2f}h elapsed)")
 

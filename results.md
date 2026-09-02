@@ -6,16 +6,6 @@ Deliverable is honest evaluation — a signal that dies after costs is a valid r
 
 ---
 
-## Methodology notes (apply throughout)
-
-- **Walk-forward only.** Test block immediately follows the train block (no shuffle).
-  Train is always strictly before test in time. This avoids confounding model
-  staleness/decay with the evaluation itself.
-- **Tune on training results only, never on test results.** Test is looked at once,
-  for reporting. No decisions are made by peeking at test scores.
-- **Purge = horizon.** The last `h` training rows have labels that reach into the
-  test block, so they are dropped to prevent leakage across the boundary.
-
 ## Data validity check — drift vs. deadband
 
 Over the ~24h capture, BTC moved ~$2k (~3%). Spread across 86,400s, that's an

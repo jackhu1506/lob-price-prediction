@@ -14,15 +14,6 @@ def message_time(data):
 
 
 def build_snapshots(path, interval=0.1, gap_threshold=5.0, depth=10, validate=True):
-    """Replay the raw feed and emit one book snapshot per fixed-time grid point.
-
-    interval       grid spacing in seconds (0.1 = 100ms)
-    gap_threshold  if two messages are > this many seconds apart, treat as a
-                   disconnect: don't forward-fill across it
-    validate       after applying each message, recompute the book's CRC32 and
-                   compare to Kraken's "c" field. Catches reconstruction bugs at
-                   the source instead of three steps downstream.
-    """
     book = OrderBook()
     rows, gaps = [], 0
     grid_t = None
@@ -73,13 +64,13 @@ def build_snapshots(path, interval=0.1, gap_threshold=5.0, depth=10, validate=Tr
 
             if last_msg_t is not None and t - last_msg_t > gap_threshold:
                 gaps += 1
-                grid_t = t                            # jump past the gap, no fill
+                grid_t = t # jump past the gap, no fill
             else:
                 while grid_t is not None and grid_t < t:
-                    rows.append(snapshot(grid_t))     # emit BEFORE applying
+                    rows.append(snapshot(grid_t)) # emit BEFORE applying
                     grid_t += interval
 
-            for p in parts:                           # apply ALL parts
+            for p in parts: # apply ALL parts
                 book.apply_update(p)
             last_msg_t = t
 
@@ -94,7 +85,7 @@ def build_snapshots(path, interval=0.1, gap_threshold=5.0, depth=10, validate=Tr
                         elif first_fail_t is None:
                             first_fail_t = t
                     else:
-                        thin += 1                     # book not full; can't hash top-10
+                        thin += 1 # book not full; can't hash top-10
 
     print(f"Rows: {len(rows)}   Gaps skipped: {gaps}")
     if validate:
