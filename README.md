@@ -2,12 +2,10 @@
 
 This project reconstructs the Bitcoin limit order book from Kraken's Level-2 feed
 and tests whether there's a short-horizon price signal in it, and if so, whether
-that signal survives trading costs. Two approaches are compared: logistic regression on
-order-flow imbalance (OFI) features, and DeepLOB (Zhang et al., 2019).
+that signal survives trading costs. The current model is a logistic regression on order-flow imbalance features, evaluated under walk-forward cross-validation. A DeepLOB (Zhang et al., 2019) comparison is planned; the PyTorch harness is validated and in place.
 
-The project emphasizes honest evaluation. I use walk-forward splits only, never
-shuffle, and watch closely for leakage. The goal is to answer the question
-objectively, not to build a backtest that looks good.
+Result: the signal is statistically real at h=10 (0.503 balanced accuracy against a 0.333 floor) but does not survive the bid-ask spread. Gross edge per trade is $1.30 against $1.80 in spread cost, so it loses money before fees enter the picture.
+
 ---
 
 ## Pipeline
@@ -24,7 +22,6 @@ baseline_model.py      (logreg vs dummy, walk-forward CV)
 decay_curve.py         -> plots/decay_curve.png      (bal_acc vs horizon)
 costs.py               (transaction-cost analysis at h=10)
 torch_logreg.py        (PyTorch logreg, known-answer test vs sklearn)
-windows.py             -> data/windows_h10.npz       (DeepLOB-ready 100x40 windows)
 ```
 
 ---
@@ -249,59 +246,3 @@ trustworthy and DeepLOB can be built on top of it.
 # illustrative
 fold 1: bal_acc=0.485   ...   mean bal_acc across folds: 0.503  (sklearn target ~0.503)
 ```
-
----
-
-## 5. DeepLOB data prep
-
-### `windows.py`
-Reshapes the 40 raw book columns from `snapshots.parquet` into the format DeepLOB
-expects: **100 timesteps × 40 values, one label per window**. Three things happen
-beyond the reshape:
-
-1. **Segments** get recomputed from `time` with the same 0.15s rule, since the raw
-   snapshot file doesn't carry a `segment_id` (that column only gets added later in
-   `features.py`).
-2. **Rolling z-score normalization.** Each column is scaled against its own
-   trailing ~5-minute history within its segment. This strips out the ~$2k BTC
-   drift and only ever looks backward, so it's leakage-free even when computed over
-   the full capture (unlike `StandardScaler`, which has to be fit on train only).
-   The first ~3,000 rows of each segment come out NaN and get dropped.
-3. **No cross-segment windows.** A window is kept only if all 100 rows are in the
-   same segment, past warmup, and the final row has a real label.
-
-Columns are interleaved the way the paper orders them (`ask_px, ask_sz, bid_px,
-bid_sz` per level) so DeepLOB's 1×2 convolution reads each price/size pair together.
-
-**Output:** `data/windows_h10.npz`.
-
-| array | shape | meaning |
-|---|---|---|
-| `feats` | (N, 40) float32 | normalized book values, paper column order |
-| `label` | (N,) | per-row label (−1/0/1), NaN where unlabeled |
-| `seg` | (N,) | segment id per row |
-| `starts` | (M,) | valid window-start indices |
-| `seq_len` | scalar | 100 |
-
-`LOBWindowDataset` serves windows lazily: it keeps the (N, 40) array in memory once
-(~80 MB) and slices on demand, instead of materializing ~430k full windows (~7 GB).
-Each item comes out as `(1, 100, 40)` with the label remapped from −1/0/1 to 0/1/2.
-
-```
-# illustrative — printed sanity output
-rows: 491,xxx   segments: 16
-warmup rows dropped (NaN norm): 48,000
-valid windows: 430,xxx   shape per window: (100, 40)
-label mix at window end  down=0.140 flat=0.720 up=0.140
-```
-
----
-
-## Methodology (applies throughout)
-
-- **Walk-forward only.** Test always follows train in time, never shuffled.
-- **Tune on train, look at test once.** No decision is made by peeking at a test score.
-- **Purge = horizon.** Train rows whose labels reach into the test block are dropped.
-- **Stale state across a gap is the recurring bug.** Book truncation, reconnect
-  reseeding, and the window/normalization boundaries all enforce one rule: never
-  carry data across a discontinuity. 
