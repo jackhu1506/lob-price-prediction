@@ -1,0 +1,7 @@
+websockets
+pandas
+pyarrow
+numpy
+scikit-learn
+matplotlib
+torch
